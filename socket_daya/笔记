@@ -1,0 +1,1878 @@
+#网络编程
+1、套接字、IPV4，简单的客户端和服务端，python网络库。
+模块socket。物理--数据链路--网络--传输--会话--表示--应用，传输---端到端的通信，套接字--传输
+直观---IP地址+端口       http  80    192.168.1.100：51324
+传输--请求或者数据--放在本机socket---物理设备--服务器-socket
+socket里边包含了 库方法和库属性--不用实例化，区别于对象的属性和函数---实例化才能调用
+import socket
+host_name= socket.gethostname()
+print("Host name %s" %host_name)
+IP= socket.gethostbyname(host_name)
+print("IP address %s"%IP)
+获取主机名和IP
+改一下：
+import socket
+def my_host():
+    host_name = socket.gethostname()
+    print("Host name %s" % host_name)
+    IP = socket.gethostbyname(host_name)
+    print("IP address %s" % IP)
+if __name__ == '__main__':
+    my_host()
+gethostname和gethostbyname，主机名和IP
+获取远端的服务器地址信息--通过名字来获取ip地址
+import  socket
+def get_server():
+    server_host='www.baidu.com'
+    try:
+        server_ip = socket.gethostbyname(server_host)
+        print("IP :%s"%server_ip)
+    except socket.error,e:
+        print "%s %s"%(server_host,e)
+if __name__ == '__main__':
+    get_server()
+
+
+socket---inet_aton和inet_ntoa用来把字符串转化成IP地址
+import socket
+from binascii import hexlify
+
+def con_ipv4():
+    ip_address= ['127.0.0.1','192.168.1.102']
+    for ip in ip_address:
+        ip_addr= socket.inet_aton(ip)
+        un_up_addr = socket.inet_ntoa(ip_addr)
+        print "IP Addres:%s =====>Packed:%s,Unpaked:%s"\
+              %(ip,hexlify(ip_addr),un_up_addr)
+        print ip_addr
+if __name__ == '__main__':
+    con_ipv4()
+端口：程序80 25
+import socket
+def find_server_name():
+    l_port = [80,25]
+
+    for port in l_port:
+        name = socket.getservbyport(port, "tcp")
+        print "Port:%s ===>server name :%s"%(port,name)
+    print "Port:%s ===>server name :%s"%(53,socket.getservbyport(53,"udp"))
+if __name__ == '__main__':
+    find_server_name()
+获取了端口号和服务的名字
+
+进行数据转化：
+import socket
+def convert():
+    data = 12
+    print ":%s===> %s   net:%s"%(data,socket.ntohl(data),socket.htonl(data)) #---32bite
+    print ":%s===> %s   net:%s" % (data, socket.ntohs(data), socket.htons(data)) #---16--bit
+if __name__ == '__main__':
+    convert()
+
+
+时间：获取超时的时间
+
+获取默认的和自己设置
+import socket
+
+def get_timeout():
+    soc = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    print "defult socket timeout:%s"%soc.gettimeout()
+    soc.settimeout(20)
+    print "current socket timeout:%s"%soc.gettimeout()
+if __name__ == '__main__':
+    get_timeout()
+
+
+socket的异常socket.error
+
+--写了一个客户端-----建立连接和发送请求，服务器
+import socket,sys,argparse
+def main():
+    print "--host:is servername,--port:is server port --filename: is send data"
+    print "domo --host=www.baidu.com --port=80  --filename=daya_socket_error.py"
+    parser = argparse.ArgumentParser(description="socket error Examples")
+    parser.add_argument("--host",dest="host")
+    parser.add_argument("--port",dest="port",type=int)
+    parser.add_argument('--file',dest="file")
+    give_args = parser.parse_args()
+    host = give_args.host
+    port = give_args.port
+    filename = give_args.file
+
+    try:
+        so = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    except socket.error as e:
+        print "Error create socket:%s"%e
+        sys.exit(1)
+    try:
+        so.connect((host,port))
+    except socket.gaierror as e:
+        print "Adress error connnecting to server:%s"%e
+        sys.exit(1)
+    except socket.error as e:
+        print "Connection error :%s" %e
+        sys.exit(1)
+    try:
+        so.sendall("GET %s HTTP/1.0\r\n\r\n"%filename)
+    except socket.error as e:
+        print "Error sending data :%s"%e
+        sys.exit(1)
+    while 1:
+        try:
+            buf = so.recv(2048)
+        except socket.error as e :
+            print "Error receiving data :%s"%e
+            sys.exit(1)
+        if not len(buf):
+            break
+        sys.stdout.write(buf)
+
+
+if __name__ == '__main__':
+    main()
+
+
+套接字的缓存--分为发和收
+
+import  socket
+
+SEND_SIZE= 2048
+RECV_SIZE= 2048
+
+def modify_buf():
+    sock= socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    bufsize = sock.getsockopt(socket.SOL_SOCKET,socket.SO_SNDBUF)
+    print "Buffer size [NO CHENGE]:%d"%bufsize
+
+    sock.setsockopt(6,socket.TCP_NODELAY,1)
+
+    sock.setsockopt(
+        socket.SOL_SOCKET,
+        socket.SO_SNDBUF,
+        SEND_SIZE
+    )
+    sock.setsockopt(
+        socket.SOL_SOCKET,
+        socket.SO_RCVBUF,
+        RECV_SIZE
+    )
+    bufsize=sock.getsockopt(65535,4097)
+    #65535=socket.SOL_SOCKET 4097=socket.SO_SNDBUF
+    认为这就是端口的概念
+    print "Buffer size [after]:%d"%bufsize
+if __name__ == '__main__':
+    modify_buf()
+
+阻塞和非阻塞， send  recv 非阻塞模式抛出异常，如果是阻塞模式直接阻止：
+import socket
+def socket_modes():
+    sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    sock.setblocking(1)
+    sock.settimeout(0.5)
+    sock.bind(("127.0.0.1",0))
+    socket_address = sock.getsockname()
+    print "socket :%s" %str(socket_address)
+    while 1:
+        sock.listen(2)
+if __name__ == '__main__':
+    socket_modes()
+sock.bind(("127.0.0.1",0)) 的 0 代表系统自动分配，setblocking-0非阻塞，1代表阻塞---需要一个例子
+
+socket的复用，就是对于绑定的端口的复用。
+import socket,sys
+
+def reuse_socket():
+    sock= socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    old_sta= sock.getsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR)
+    print "Old sock:%d"%old_sta
+
+    sock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+    new_sta = sock.getsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR)
+
+    print "New sock:%d"%new_sta
+
+    local_port = 9901
+    srv = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    srv.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+    srv.bind(("",local_port))
+    srv.listen(2)
+    print "port:%s"%local_port
+
+    while True:
+        try:
+            connect,addr = srv.accept()
+            print "Connected by :%s:%s"%(addr[0],addr[1])
+        except KeyboardInterrupt:
+            break
+        except socket.error,msg:
+            print "%s"%msg
+
+if __name__ == '__main__':
+    reuse_socket()
+sock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)设置端口复用
+
+
+获取网络服务器的时间
+import ntplib
+
+from time import ctime
+
+def get_time():
+    ntpclient = ntplib.NTPClient()
+    reponse = ntpclient.request("pool.ntp.org")
+    print ctime(reponse.tx_time)
+
+if __name__ == '__main__':
+    get_time()
+
+客户端和服务器：
+
+
+服务器：
+import socket,sys,argparse
+
+host = "localhost"
+data_payload = 2048
+backlog = 5
+
+def  daya_server(port):
+    sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+    server_host = (host,port)
+    print "server on %s port %s"%server_host
+    sock.bind(server_host)
+
+    sock.listen(backlog)
+    while True:
+        print "Waiting to receive from client"
+        client,address= sock.accept()
+        data = client.recv(2048)
+        if data:
+            print "Data :%s"%data
+            client.send(data)
+            print "send %s bytes back  to %s"%(data,address)
+        client.close()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Socket Set:")
+    parser.add_argument("--port",dest="port",type=int)
+    given_arg = parser.parse_args()
+    port  = given_arg.port
+    daya_server(port)
+
+
+
+客户端：
+import socket
+import sys
+import argparse
+host = "localhost"
+
+def daya_clietn(port):
+    sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    server_address=(host,port)
+    print "Connecting to %s port %s"%server_address
+
+    sock.connect(server_address)
+
+    try:
+        message = "Test message.This will to server"
+        print "Sending %s"%message
+        sock.sendall(message)
+        amount_recived = 0
+        amount_expected = len(message)
+        while amount_recived < amount_expected:
+            data = sock.recv(32)
+            amount_recived += len(data)
+            print "Received :%s"%data
+    except socket.error,e:
+        print "Socket error :%s"%str(e)
+    except Exception,e:
+        print "Other exception：%s" %str(e)
+    finally:
+        print "Over seccuss!!!"
+        sock.close()
+
+if __name__ == '__main__':
+    parse = argparse.ArgumentParser(description="Socket client")
+    parse.add_argument("--port",dest="port",type=int)
+    give_args= parse.parse_args()
+    port = give_args.port
+    daya_clietn(port)
+
+
+解决阻塞的问题，解决单用户的问题。
+socketserver能够实现TCP或者UDP的服务器
+TCPServer ForkingMixin    TCPServer可以自动完成，套接字创建服务器
+ForkingMixin  用来异步的处理客户端情况
+接收客户端发送的消息，BaseRequestHandler
+import os,socket,threading,SocketServer
+
+SERVER_HOST='localhost'
+SERVER_PORT = 0
+BUFFER_SIZE = 2048
+MSG ="Hello server!"
+
+#客户端的程序
+class ForkingClient():
+    def __init__(self,ip,port):
+    #创建socket，创建连接
+        self.sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        self.sock.connect((ip,port))
+
+    def run(self):
+    #获取当前线程
+        current_id = os.getpid()
+        print "PID %s send message to server:%s"%(current_id,MSG)
+        #向服务器发送请求
+        send_data = self.sock.send(MSG)
+        print "Send:%d char"%send_data
+        reponse = self.sock.recv(BUFFER_SIZE)
+        #接收服务器返回的请求
+        print "PID %s recived:%s"%(current_id,reponse[5:])
+    def shutdowd(self):
+        self.sock.close()
+        #关闭服务
+class ForkingServerRequestHandler(SocketServer.BaseRequestHandler):
+#使用BaseRequestHandler的handle来处理客户端发送过来的数据，并且返回信息给client
+    def handle(self):
+        data = self.request.recv(BUFFER_SIZE)
+        current_id = os.getpid()
+        response = "%s:%s"%(current_id,data)
+        print "Sver sending [current_id:data]:%s"%response
+        self.request.send(response)
+        return
+class ForkingServer(SocketServer.ForkingMixIn,SocketServer.TCPServer,):
+    pass
+    #创建server服务器，处理异步请求TCPServer
+
+def main():
+    server = ForkingServer((SERVER_HOST,SERVER_PORT),ForkingServerRequestHandler)
+    #创建服务器
+    ip,port = server.server_address
+    server_thread = threading.Thread(target=server.serve_forever)
+    #设置为守护线程
+    server_thread.setDaemon(True)
+    #开启线程
+    server_thread.start()
+    print "server loop PID:%s"%os.getpid()S
+    client1 = ForkingClient(ip,port)
+    #开启客户端请求
+    client1.run()
+    client2 = ForkingClient(ip,port)
+    client2.run()
+    server.shutdown()
+    client1.shutdowd()
+    client2.shutdowd()
+    server.socket.close()
+
+if __name__ == '__main__':
+    main()
+
+
+#线程----所有的线程---在main函数开启的线程一定在主函数之后结束
+守护线程---当除了守护线程外，没有其他的的线程运行，主线就直接结束
+比如---网游。单独一个线程---更新。
+
+import time,threading
+
+def fun():
+    print "start fun!!!!"
+    time.sleep(2)
+    print "end fun!!!!"
+
+if __name__ == '__main__':
+    print "main thread"
+    t1 = threading.Thread(target=fun,args=())
+    t1.start()
+    time.sleep(1)
+    print "main thread end"
+ #普通线程 正常结束
+
+import time,threading
+
+def fun():
+    print "start fun!!!!"
+    time.sleep(2)
+    print "end fun!!!!"
+
+if __name__ == '__main__':
+    print "main thread"
+    t1 = threading.Thread(target=fun,args=())
+    t1.setDaemon(True)
+    t1.start()
+    time.sleep(1)
+    print "main thread end"
+
+主线程不管守护线程是否结束
+
+import os,socket,threading,SocketServer
+
+SERVER_HOST='localhost'
+SERVER_PORT = 0
+BUFFER_SIZE = 2048
+
+def client(ip,port,message):
+    sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    sock.connect((ip,port))
+    try:
+        sock.sendall(message)
+        response = sock.recv(BUFFER_SIZE)
+        print "Client recived :%s"%response
+    except socket.error,e:
+        print "Error:%s"%e
+    finally:
+        sock.close()
+class ThreadTCPRequesetHandler(SocketServer.BaseRequestHandler):
+    def handle(self):
+        data = self.request.recv(2048)
+        current_thread=threading.current_thread().getName()
+        response = "%s:%s"%(current_thread,data)
+        self.request.sendall(response)
+
+class TreadedTCPServer(SocketServer.ThreadingMixIn,SocketServer.TCPServer):
+    pass
+
+if __name__ == '__main__':
+    server = TreadedTCPServer((SERVER_HOST,SERVER_PORT),ThreadTCPRequesetHandler)
+    ip,port= server.server_address
+    server_tread=threading.Thread(target=server.serve_forever)
+    server_tread.daemon=True
+    server_tread.start()
+    print "Thread_name:%s"%server_tread.name
+    client(ip,port,"Hello I am client1")
+    client(ip,port,"Hello I am client2")
+    client(ip,port,"Hello I am client3")
+    server.shutdown()
+
+
+ 聊天器：
+ 服务器：---client  连接    （有新人进入聊天室）   某人发送的消息，发送给除了自己之外的所有人。
+ client-server   thread-       python的select模块
+
+数据---传输--序列化和反序列
+client-server    recv和send
+
+
+import select
+import socket
+import sys
+import cPickle
+import struct
+import argparse
+import signal
+
+SERVER_HOST = 'localhost'
+CHAT_SERVER_NAME='server'
+
+def send(channel,*args):
+#序列化要发出去的数据
+    buffer=cPickle.dumps(args)
+#把十进制转化成数字类型的网络字节
+    value = socket.htonl(len(buffer))
+#把数字长度，转化成Long类型
+    size = struct.pack("L",value)
+#发送的长度
+    channel.send(size)
+#value值
+    channel.send(buffer)
+
+def receive(channel):
+#指定一个struct的L格式
+    size = struct.calcsize("L")
+#接收这个格式的数据
+    size=channel.recv(size)
+    try:
+#接收过来的数据再转成长度值
+        size = socket.ntohl(struct.unpack("L",size)[0])
+    except struct.error,e:
+        return ""
+    buf =''
+#使用字符创笃和总长度进行比较，接收所有的数据
+    while len(buf)<size:
+        buf = channel.recv(size-len(buf))
+    return cPickle.loads(buf)[0]
+
+class ChatServer(object):
+    def __init__(self,port,backlog=5):
+    # 统计有多少客户端
+        self.clients = 0
+        # 用来做一个   cleint-（name，address）
+        self.clientmap = {}
+        # 存储所有的client--socket
+        self.outputs = []
+        self.server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        self.server.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
+        #设置了一个可以重用的socket
+        self.server.bind((SERVER_HOST,port))
+        #打印服务器开启
+        print "Server listering to port:%s"%port
+        self.server.listen(backlog)
+        #接收一个来自键盘的信号，如果是ctrl-c 调用sighandler（结束这个serbver）
+        signal.signal(signal.SIGINT,self.sighandler)
+    def sighandler(self,signum,frame):
+    #关闭服务器的过程
+        print "Shuting down server ~~~~~"
+        for output in self.outputs:
+            output.close()
+        self.server.close()
+    def get_client_name(self,client):
+    #  关于获取客户端的client和host信息
+        info = self.clientmap[client]
+        host,name = info[0][0],info[1]
+        return "@".join((name,host))
+
+    def run(self):
+    # 服务器，系统输入，client，client
+        inputs =[self.server,sys.stdin]
+        self.outputs=[]
+        running = True
+        while running:
+            try:
+            #select分别获取inputs，outputs，[]
+                readable,writeable,exceptional = select.select(inputs,self.outputs,[])
+            except select.error,e:
+                break
+            for sock in readable:
+                if sock == self.server:
+                #如果是server，就证明有client进来
+                    client,address=self.server.accept()
+                    #就获取client信息
+                    print "Chat server :got connection %d from %s"%(client.fileno(),address)
+                    #client名字截取
+                    cname = receive(client).split("NAME:")[1]
+                    # clients个数+1
+                    self.clients+=1
+                    #发送客户端连接成功
+                    send(client,"CLIENT:"+str(address[0]))
+                    #加入连接成功的client
+                    inputs.append(client)
+                    #键值对的列表，进行更新
+                    self.clientmap[client] =(address,cname)
+                    msg ="\n(Connected:New client (%d) from %s)"%(self.clients,self.get_client_name(client))
+                    for output in self.outputs:
+                    #告知所有的客户端有一个连接进来
+                        send(output,msg)
+                     #加入到存储所有的client的列表
+                    self.outputs.append(client)
+                elif sock ==sys.stdin:
+                    junk =sys.stdin.readline()
+                    #如果是系统参数直接退出服务器
+                    running=False
+                else:
+                #不是服务器，也不是系统值，就是client
+                    try:
+                        data = receive(sock)
+                        #接收里边发送过来的数据
+                        if data:
+                        #如果有数据
+                            msg = "\n#["+self.get_client_name(sock)+"]"+data
+                            # #client1 hello
+                            for output in self.outputs:
+                            #发送给出了发送的客户端之外的所有客户端
+                                if output !=sock:
+                                    send(output,msg)
+                        else:
+                        #证明客户端发送的数据接收不到，就关闭这个client的socket
+                            print "Chat server:%d hung up"%sock.fileno()
+                            #把client的数量-1
+                            self.clients-=1
+                            #接收不到信息的socket关闭
+                            sock.close()
+                            #inputs里边的关于这个client的信息删除
+                            inputs.remove(sock)
+                            #把所有的关于client的列表，删除本socket的client
+                            self.outputs.remove(sock)
+                            msg = "\n New hung up :Client from %s"%self.get_client_name(sock)
+                            for output in self.outputs:
+                            #告知所有的client，移除了一个客户端
+                                send(output,msg)
+                    except socket.error,e:
+                        #inputs里边的关于这个client的信息删除
+                        inputs.remove(sock)
+                        #把所有的关于client的列表，删除本socket的client
+                        self.outputs.remove(sock)
+
+客户端
+class ChatClient(object):
+    def __init__(self,name,port,host =SERVER_HOST):
+        self.name=name
+        self.port = port
+        self.connected =False
+        #客户端，写一个标志
+        self.host=host
+        self.prompt ="["+'@'.join((name,socket.gethostname().split('.')[0]))+"]"
+
+        try:
+            self.sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+            #创建一个socket
+            self.sock.connect((host,self.port))
+            print "Now conneted to chat server port %d"%self.port
+            self.connected=True
+            #设置连接成功
+            send(self.sock,"NAME:"+self.name)
+            #服务器发送数据，scoket，client1
+            data = receive(self.sock)
+            #通过socket接收服务器返回的信息
+            addr = data.split("CLIENT:")[1]
+            self.prompt='['+'@'.join((self.name,addr))+']'
+            #想在本地打印正常连接
+        except socket.error,e:
+            print "Failed to connect to chat server @ port %d"%self.port
+            sys.exit(1)
+    def run(self):
+        while self.connected:
+        #表示客户端和服务器连城正常
+            try:
+                sys.stdout.write(self.prompt)
+                #输出连接成功的信息
+                sys.stdout.flush()
+                readable,writeable,exceptional = select.select([0,self.sock],[],[])
+                for sock in readable:
+                #sock==0，客户端输入的状态，往服务器输送数据
+                    if sock==0:
+                        data = sys.stdin.readline().strip()
+                        # 如果客户端输入了数据，就发送给服务器
+                        if data:send(self.sock,data)
+                    elif sock==self.sock:
+                     #self.sock是接收服务器发送的数据
+                        data = receive(self.sock)
+                        #接收服务器发送过来的其他用户发送的信息
+                        if not data:
+                        #如果这个客户端，接收不到，关闭
+                            print "Client shutting down"
+                           #False
+                            self.connected=False
+                            break
+                        else:
+                        #有数据，输出到客户端的屏幕
+                            sys.stdout.write(data+'\n')
+                            sys.stdout.flush()
+            except KeyboardInterrupt:
+                print "Client interrupted!!!!!!!"
+                self.sock.close()
+                break
+
+if __name__ == '__main__':
+    parser= argparse.ArgumentParser(description="Socket server ande Client")
+    parser.add_argument("--name",dest="name")
+    parser.add_argument("--port",dest="port",type=int)
+    #获取输入界面给定的参数
+    given_addr = parser.parse_args()
+    port = given_addr.port
+    name = given_addr.name
+    #解析出name和port
+    if name == CHAT_SERVER_NAME:
+    #就是判断开启是不是server
+        server=ChatServer(port)
+        server.run()
+    else:
+    #开启客户端
+        client = ChatClient(name=name,port=port)
+        client.run()
+
+
+#windows聊天室
+
+
+import socket
+import threading
+
+sock=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+sock.bind(("localhost",9901))
+
+sock.listen(2)
+print("Server",socket.gethostbyname("localhost"),"Running")
+
+#关于客户端信息的字典
+mydict = dict()
+#所有的client的socket。
+mylist =list()
+
+#写数据的函数,有客户端进入聊天--其他客户端发送出来的聊天数据
+def tellOthers(exceptNum,whatTosay):
+    #exceptNum 标志除了自己，whatTosay--要发送的信息
+    for dy in mylist:
+        if dy.fileno() !=exceptNum:
+            try:
+                dy.send(whatTosay.encode())
+            except:
+                pass
+#myconnection 客户端的socket，connNumber=fileno
+def subThreadIn(myconnection,connNumber): #这是一个转发器
+    #有可能是客户端的聊天，如果新客户端，客户端自己定义的名字
+    nickname = myconnection.recv(2048).decode()
+    mydict[myconnection.fileno()] = nickname
+    # socket-->张三
+    #把这个client放入服务器的client列表
+    mylist.append(myconnection)
+    print("connetion",connNumber,"has sucsess",nickname)
+    #告诉服务器client连接正常
+    tellOthers(connNumber,"【提示："+mydict[connNumber]+"进入聊天室】")
+    #通知所有的client，有新人进来了
+    while True:
+        try:
+            recvMSG=myconnection.recv(2048).decode()
+            #尝试获取客户端发送的信息
+            if recvMSG:
+                #有正常的聊天数据
+                print(mydict[connNumber],":",recvMSG)
+                #在服务器显示
+                tellOthers(connNumber,mydict[myconnection.fileno()]+":"+recvMSG)
+                #发送给所有用户
+        except(OSError,ConnectionResetError):
+            try:
+                mylist.remove(myconnection)
+            except:
+                pass
+            print(mydict[myconnection.fileno()],"exit",len(mylist),"left")
+            #告诉服务器有人离开
+            tellOthers(connNumber,"【提示："+mydict[connNumber]+"离开】")
+            #告诉所有人有人离开
+            myconnection.close()
+            #关闭client的socket
+            return
+
+while True:
+    connection,addr =sock.accept()
+    # 获取和客户端的连接
+    print("Accept a new Connnection",connection.getsockname(),connection.fileno())
+    try:
+        buf =connection.recv(2048).decode()
+        #接收客户端的数据
+        if buf=="2":
+            connection.send(b"welcome you to my server")
+            # 发送给客户端连接正确信息
+            mythread = threading.Thread(target=subThreadIn,args=(connection,connection.fileno()))
+            #用来开启转发的程序
+            mythread.setDaemon(True)
+            #设置为守护线程
+            mythread.start()
+        else:
+            connection.send(b"please go out")
+            #连接异常，关闭socket
+            connection.close()
+    except:
+        pass
+
+
+import socket,time
+import threading
+
+sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+sock.connect(("localhost",9901))
+#一连接成功就发送2数据过去
+sock.send(b'2')
+print(sock.recv(2048).decode())
+#输出服务器返回的信息
+
+nickName= input("input your nickname:")
+sock.send(nickName.encode())
+#发送一个自己定义的名字
+
+def sendThreadFunc():
+    while True:
+        try:
+            #从客户端的键盘输入内容
+            myword = input()
+            #把键盘的内容发送到服务器
+            sock.send(myword.encode())
+        except ConnectionAbortedError:
+            print("Server closed this connectiion")
+        except ConnectionResetError:
+            print("Error")
+
+def recvThreadFunc():
+    while True:
+        try:
+            #获取其他用户发送给服务器的数据
+            otherword = sock.recv(2048)
+            if otherword:
+                #输出到本地
+                print(otherword.decode())
+            else:
+                pass
+        except ConnectionResetError:
+            print("server colsed")
+        except ConnectionAbortedError as e:
+            print("error :%s"%e)
+
+th1 = threading.Thread(target=sendThreadFunc)
+th2 = threading.Thread(target=recvThreadFunc)
+#使用两个线程开启数据的接收和发送
+threads = [th1,th2]
+for th in threads:
+    th.setDaemon(True)
+    th.start()
+th.join()
+
+
+windows的方式使用的消耗cpu的方式
+
+
+import argparse,asyncore,socket
+
+LOCAL_SERVER_PORT ="localhost"
+#本地的绑定地址
+RMEOTE_SERVER_HOST="www.baidu.com"
+#跳转之后的地址
+BUFSIZE=4096
+#读取或者发送出去的缓冲大小
+
+class PortForwarder(asyncore.dispatcher):
+    def __init__(self,ip,port,rempteip,remoteport,backlog=5):
+        #ip--本地地址,port--本地端口,rempteip--跳转的地址,remoteport--跳转的端口
+        asyncore.dispatcher.__init__(self)
+        self.rempteip=rempteip
+        self.remoteport= remoteport
+        #dispatcher的create_socket创建socket，socket.socket
+        self.create_socket(socket.AF_INET,socket.SOCK_STREAM)
+        #dispatcher的set_reuse_addr设置重用socket
+        self.set_reuse_addr()
+        #dispatcher的bind帮点本地主机
+        self.bind((ip,port))
+    def handle_accept(self):
+        #接收客户端，直接网页的操作，来接收访问服务器的请求
+        conn,addr=self.accept()
+        print "Conneted to:",addr
+        #使用Sender来实现跳转到百度的功能
+        Sender(Receiver(conn),self.rempteip,self.remoteport)
+
+class Receiver(asyncore.dispatcher):
+    def __init__(self,conn):
+        #conn客户端段访问的socket
+        asyncore.dispatcher.__init__(self,conn)
+        # 从哪来的请求
+        self.from_remote_buffer=''
+        #到哪里去的请求
+        self.to_remote_buffer=''
+        self.sender=None
+    def handle_connect(self):
+        #开启套接字的实际的连接时就调用
+        pass
+    def handle_read(self):
+        #读取通道上调用成功的值，被Sender的handle_write获取
+        read = self.recv(BUFSIZE)
+        self.from_remote_buffer+=read
+    def writable(self):
+        #必须是可写的时候才能调用write的
+        return (len(self.to_remote_buffer)>0)
+    def handle_write(self):
+        sent = self.send(self.to_remote_buffer)
+        #PortForwarder的上边client的请求，收到的回复，来自于Sender的handle_read
+        self.to_remote_buffer=self.to_remote_buffer[sent:]
+    def handle_close(self):
+        self.close()
+        #完成就关闭发送
+        if self.sender:
+            self.sender.close()
+class Sender(asyncore.dispatcher):
+    def __init__(self,reveiver,remoteip,remoteport):
+        #reveiver获取client过来的值
+        asyncore.dispatcher.__init__(self)
+        self.reveiver=reveiver
+        #sender就是一个Sender实例化后的值
+        reveiver.sender= self
+        self.create_socket(socket.AF_INET,socket.SOCK_STREAM)
+        #和百度建立请求，使用socket的方式
+        self.connect((remoteip,remoteport))
+    def handle_connect(self):
+        #一直开启-监控请求
+        pass
+    def handle_read(self):
+        #读取百度返回的信息，给了Receiver的handle_write
+        read = self.recv(BUFSIZE)
+        self.reveiver.to_remote_buffer +=read
+    def writable(self):
+        #判断值是否大于0
+        return (len(self.to_remote_buffer) > 0)
+    def handle_write(self):
+        #是从Receiver接受客户端连接的请求，发送到百度
+        sent = self.send(self.reveiver.from_remote_buffer)
+        self.reveiver.from_remote_buffer=self.reveiver.from_remote_buffer[sent:]
+    def handle_close(self):
+        #完成关闭reveiver
+        self.close()
+        self.reveiver.close()
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="SOCKET SERVER")
+    parser.add_argument("--local-host",dest="local_host",default=LOCAL_SERVER_PORT)
+    parser.add_argument("--local-port",dest="local_port",type=int)
+    parser.add_argument("--remote-host",dest="remote_host",default=RMEOTE_SERVER_HOST)
+    parser.add_argument("--remote-port",dest="remote_port",type=int,default=80)
+    #设置参数
+    given_args=parser.parse_args()
+    local_host,remote_host = given_args.local_host,given_args.remote_host
+    local_port,remote_port = given_args.local_port,given_args.remote_port
+    PortForwarder(local_host,local_port,remote_host,remote_port)
+    asyncore.loop()
+    #开启监听功能
+
+
+# subprocess--用来生成子进程，管道--输入--输出--错误。
+# stdin标准的输入--stdout管道的输出，stderr管道错误
+shlex就是shell的解析器，很被识别成list
+
+import subprocess
+#用来产生子进程
+import shlex
+#用来获取分割后的list
+command = "ping www.baidu.com"
+args = shlex.split(command)
+#分割命令和地址
+try:
+    subprocess.check_call(args)
+    #产生一个子进程
+    print("baidu web server is up")
+    #如果能ping通服务器正常
+except subprocess.CalledProcessError:
+  #证明服务器没开
+    print("Failed to go baidu")
+
+
+监控服务器--2分钟内有没有服务
+建立连接--120秒内不断的连接，如果连接正常就停止操作
+import argparse
+import socket
+import errno
+from time import time as now
+
+DEFAULT_TIMEOUT=120
+#设置超时的时间
+DEFAULT_SERVER_HOST = "localhost"
+#设置默认的连接的服务器地址
+DEFAULT_PORT = 80
+#默认的服务器的端口
+
+class ServiceChecker(object):
+    def __init__(self,host,port,timeout=DEFAULT_TIMEOUT):
+        self.host = host
+        self.port = port
+        self.timeout = timeout
+        self.sock = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        #初始化这个类就产生一个socket
+    def end_wait(self):
+        self.sock.close()
+        #使用socket的关闭
+    def check(self):
+        if self.timeout:
+            end_time = now()+self.timeout
+            #获取当前时间戳
+            #119002+20 = 119022
+        while True:
+            try:
+                if self.timeout:
+                #检查时间是不是有
+                    #119004+20 119024  118
+                    next_timeout=end_time-now()
+                    #拿之前时间减去当前的时间戳
+                    if next_timeout<0:
+                        return False
+                        #判断当前的时间是不是已经用完了，完了直接退出循环
+                    else:
+                        print "setting socket next timeout %s"%round(next_timeout)
+                        #剩多少
+                        self.sock.settimeout(next_timeout)
+                        #socket的超时的检查中
+                self.sock.connect((self.host,self.port))
+                #如果时间正常，建立连接
+            except socket.timeout,err:
+                if self.timeout:
+                    return False
+                    #如果超时，直接退出
+            except socket.error,err:
+                print "Exception %s" %err
+                #没有连接到，抛出连接异常
+            else:
+                self.end_wait()
+                #结束
+                return True
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Wait service")
+    parser.add_argument("--host",dest="host",default=DEFAULT_SERVER_HOST)
+    parser.add_argument("--port",dest="port",type=int,default=DEFAULT_PORT)
+    parser.add_argument("--timeout",dest="timeout",type=int,default=DEFAULT_TIMEOUT)
+    given_args = parser.parse_args()
+    host,port,timeout = given_args.host,given_args.port,given_args.timeout
+    service_checker = ServiceChecker(host,port,timeout)
+    print "Checking network service %s:%s"%(host,port)
+    if service_checker.check():
+    #用来开启这个超时检查的函数33
+        print "Service is available again!"
+
+网络的操作。本地属性--所有的已经开启进程---基于windows的
+import os
+
+taskinfo =os.popen("tasklist /NH /FO CSV")
+# 开启获取所有进程列表
+task = {}
+line = taskinfo.readline()
+#读取一行
+while line:
+    line = line.replace('"','')
+    alist = line.split(",")
+    task[alist[1]] = alist[0]
+    # 4 --System   使用ID 和进程名做对应
+    line=taskinfo.readline()
+    #处理完一行处理下一行
+taskinfo.close()
+netinfo= os.popen("netstat -naO")
+#获取当前的所有的tcphe udp的服务
+line = netinfo.readline()
+line = netinfo.readline()
+line = netinfo.readline()
+line = netinfo.readline()
+line = netinfo.readline()
+#读取5行之后，才获得真正的值
+
+alist = ["Proto","Local Address","Foreign Address","State","PID","Progrem name"]
+#做一个表头
+print( "%-8s%-25s%-25s-%15s-%8s\t%-s")%(alist[0],alist[1],alist[2],
+                                        alist[3],alist[4],alist[5])
+#表头
+while line:
+    alist= line.split()
+    if len(alist)==4:
+    #实质上在检查是tcp还是UDP
+        alist.append(alist[3])
+        #UDP    0.0.0.0:500        *:*       1028   1028
+        #UDP    0.0.0.0:500        *:*       1028   1028  EduRender.exe  最终
+        alist[3]=''
+        #在udp最后一行协商PID
+    alist.append(task[alist[-1]])
+    #alist[-1]是获取了分割后的最后一个值PID，也可以给4
+    print("%-8s%-25s%-25s-%15s-%8s\t%-s") % (alist[0], alist[1], alist[2],
+                                             alist[3], alist[4], alist[5])
+    line = netinfo.readline()
+    #获取下一行进程的属性
+netinfo.close()
+
+
+检查IP地址：
+import  argparse
+import  sys
+import socket
+import fcntl
+import  struct
+import array
+
+
+def get_ip_adress(ifname):
+    sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+    return socket.inet_ntoa(fcntl.ioctl(
+    #inet_ntoa把数字编程点分格式192.168.1.102，ioctl检查IP地址的
+        sock.fileno(),0x8915,struct.pack("256s",ifname[:15])
+        #ock.fileno()使用的socket，0x8915固定参数，pack就是一种格式化
+    )[20:24])
+    #出去了四个list的值，每个值都是一段IP地址
+
+if __name__ == '__main__':
+    parsre = argparse.ArgumentParser(description="Python IPaddr")
+    parsre.add_argument("--ifname",dest="ifname")
+    give_args= parsre.parse_args()
+    ifname =  give_args.ifname
+    print "IterFace[%s] --> IP:%s"%(ifname,get_ip_adress(ifname))
+    #调用
+
+
+使用unix方式开启服务器和客户端：
+
+服务器
+import socket
+import os
+import  time
+
+SERVER_PATH="/tmp/python_linux_server"
+#服务开启的路径
+def run_linux_socket_server():
+    if os.path.exists(SERVER_PATH):
+        os.remove(SERVER_PATH)
+        #在判断linux究竟有没有这个目录或者文件
+    print "Starting linux socket server"
+    server = socket.socket(socket.AF_UNIX,socket.SOCK_DGRAM)
+    #创建一个socket，绑定到一个地址下边
+    server.bind(SERVER_PATH)
+    print "litening on path %s"%SERVER_PATH
+    while True:
+        datagram = server.recv(2048)
+        #接收客户端发送的数据
+        if not datagram:
+            break
+        else:
+            print "~~"*20
+            print datagram
+#输出客户端的发送信息
+        if "ESC" == datagram:
+            break
+    print "~~"*20
+    print "Server is shutting down"
+    server.close()
+    #关闭服务器
+    os.remove(SERVER_PATH)
+    #移除服务的路径
+if __name__ == '__main__':
+    run_linux_socket_server()
+
+客户端：
+import socket
+import sys
+SERVER_PATH="/tmp/python_linux_server"
+#访问一个客户端
+def run_linux_socket_client():
+    sock = socket.socket(socket.AF_UNIX,socket.SOCK_DGRAM)
+    server_adress = SERVER_PATH
+    print "connecting to %s"%server_adress
+    try:
+        sock.connect(server_adress)
+        #连接服务器的的地址
+    except socket.error,msg:
+        print "error :%s" % msg
+        sys.exit(1)
+    try:
+        message = "This is linux socket client"
+        print "%s"%message
+        sock.sendall(message)
+        #发送数据给服务器
+        amount_received = 0
+        amount_excepted = len(message)
+        #接收服务器返回的信息
+        while amount_received<amount_excepted:
+              data = sock.recv(512)
+              amount_received +=len(data)
+              print "Received [%s]"%data
+    finally:
+        print "Closeing client"
+        sock.close()
+if __name__ == '__main__':
+    run_linux_socket_client()
+
+
+WEB  ---HTTP
+C:\Users\Administrator>python -m SimpleHTTPServer 8080
+Serving HTTP on 0.0.0.0 port 8080 ...
+127.0.0.1 - - [06/Oct/2019 21:31:02] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [06/Oct/2019 21:31:03] code 404, message File not found
+127.0.0.1 - - [06/Oct/2019 21:31:03] "GET /favicon.ico HTTP/1.1" 404 -
+
+
+python -m SimpleHTTPServer 8080开启了一个web服务，把当前的路径做成一个WEB服务，里边的所有的东西，只要
+能够正常访问这个web服务器就可以使用
+import argparse
+import sys
+from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
+
+DEFAULT_HOST = "127.0.0.1"
+#web服务器的地址
+DEFAULT_PORT = 8800
+#端口
+class RequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+         self.send_response(200)
+         #设置返回的值，状态
+         self.send_header("Content-Type","text/html")
+         #设置格式，头格式
+         self.end_headers()
+         #结束头格式设置
+         self.wfile.write("Hello daya welcome you!!")
+         #显示web的内容
+         return
+class CustomHTTPServer(HTTPServer):
+    def __init__(self,host,port):
+        server_adress = (host,port)
+        #服务器的开启地址，web属性（RequestHandler）
+        HTTPServer.__init__(self,server_adress,RequestHandler)
+
+def run_server(port):
+    try:
+        server = CustomHTTPServer(DEFAULT_HOST,port)
+        #开启服务
+        print "Custom HTTP started on %s :%s"%(DEFAULT_HOST,port)
+        server.serve_forever()
+        #循环的监听，是否有连接的连接请求，直接处理
+    except Exception,err:
+        print "Error:%s" %err
+    except KeyboardInterrupt:
+        print "shutting dowb"
+        server.socket.close()
+        #打断的异常，关闭服务器
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="HTTP server")
+    parser.add_argument("--port",dest="port",type=int ,default=DEFAULT_PORT)
+    given_args = parser.parse_args()
+    port = given_args.port
+    run_server(port)
+
+代理-----
+使用一个代理--帮我们访问一个网站。165.24.10.8:8080
+import urllib
+URL = "https://www.github.com"
+AGENT_ADDRESS="165.24.10.8:8080"
+#代理地址
+if __name__ == '__main__':
+    resp = urllib.urlopen(URL,proxies={"http":AGENT_ADDRESS})
+    #使用代理打开网站
+    print "Proxy server headers :%s" %resp.headers
+    #获取网站的所有header信息
+
+伪装------把其他人的主机信息，给出去别人的主机
+
+import urllib2
+BROWSER = 'Mozilla/5.0 (Windows NT 5.1; rv:20.0) Gecko/20100101 Firefox/20.0'
+#伪装的本地主机信息
+URL ="http://www.python.org"
+#访问的网站
+def spoof_firefox():
+    opener = urllib2.build_opener()
+    #创建一个连接者
+    opener.addheaders = [("User-agent",BROWSER)]
+    #设置代理---做了一个伪装
+    reult = opener.open(URL)
+    #获取的python的返回的headers信息
+    print "Python Headers"
+    for header in reult.headers.headers:
+        print "\t",header
+if __name__ == '__main__':
+    spoof_firefox()
+
+
+检查服务器是否正常开启：
+import argparse
+import httplib
+import re
+import urllib
+import urlparse
+
+DEFAULT_URL= "http://www.python.org/"
+#一个默认的服务器的地址
+HTTP_RIGHT_CODES=[httplib.OK,httplib.MOVED_PERMANENTLY,httplib.FOUND]
+# 就是服务器返回状态码，200 301,302  都是正常的
+def get_server_status_code(url):
+    host ,path =urlparse.urlparse(url)[1:3]
+    #scheme=http, netloc=服务器地址（localhost）, url=path, params="", query='a=hello&b=daya', fragment=''
+    try:
+        conn=httplib.HTTPConnection(host)
+        #建立HTPP的连接
+        conn.request("HEAD",path)
+        #获取HEAD的信息
+        return conn.getresponse().status
+        # 获取网站的返回信息
+    except StandardError:
+    #如果没有建立好连接，直接返回空
+        return None
+if __name__ == '__main__':
+    parser= argparse.ArgumentParser(description="HEAD check")
+    parser.add_argument("--url",dest="url",default=DEFAULT_URL)
+    given_args=parser.parse_args()
+    #获取输入参数
+    url = given_args.url
+    if get_server_status_code(url) in HTTP_RIGHT_CODES:
+    #如果返回的状态码 是200或者301或者302，输出服务器正常
+        print "Server : %s is Worked"%url
+    else:
+    #否则服务器不正常
+        print "Server :%s is Stoped"%url
+
+一个网络的服务器----WEB----客户端
+一定有数据的流动，为了节省带宽--压缩
+
+import argparse
+import string
+import os
+import sys
+import cStringIO
+import gzip
+from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
+
+DEFAULT_HOST = '127.0.0.1'
+DEFAULT_PORT = 9901
+HTML_CONTENT = """<html><body><h1>Great China Go To Great Up!!</h1></body></html>"""
+
+class RequestHander(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        #设置一个正常状态码
+        self.send_header("Content-type","text/html")
+        #设置头文件信息
+        self.send_header("Conten=Encoding","gzip")
+        #设置支持的格式
+        zbuf=self.compress_buffer(HTML_CONTENT)
+        # 压缩内容
+        sys.stdout.write("Content-Ecoding :gzip \r\n")
+        sys.stdout.flush()
+        self.send_header("Content-Length",len(zbuf))
+        #设置容纳的长度
+        self.end_headers()
+        # 结束设置
+        zbuf = self.compress_buffer(HTML_CONTENT)
+        sys.stdout.write("Content-Ecoding:gzip \r\n")
+        sys.stdout.write("Content-Length :%d"%(len(zbuf)))
+        sys.stdout.write('\r\n')
+
+        self.wfile.write(zbuf)
+        #发送到客户端的数据交给wfile，不缓冲数据。一次性写入，zip--完整。
+        return
+    def compress_buffer(self,buf):
+        zbuf = cStringIO.StringIO()
+        #只是生成了一个StringIO对象
+        zfile=gzip.GzipFile(mode="wb",fileobj=zbuf,compresslevel=5)
+        #wb表示字节流的方式写
+        zfile.write(buf)
+        #写入压缩的内容
+        zfile.close()
+        return zbuf.getvalue()
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="HTTPP SERVER")
+    parser.add_argument("--port",dest="port",type=int,default=DEFAULT_PORT)
+    given_args=parser.parse_args()
+    port = given_args.port
+    server_address=(DEFAULT_HOST,port)
+    server = HTTPServer(server_address,RequestHander)
+    #直接创建一个HTTP的服务器
+    server.serve_forever()
+    #一直监控服务器时候有web请求
+
+从python网站下载--文件
+
+import urllib
+import os
+
+TARGET_URL = "https://www.python.org/ftp/python/3.7.4/"
+TARGET_FILE = "python-3.7.4-embed-amd64.zip"
+
+class CustomURLOpener(urllib.FancyURLopener):
+    def http_error_206(self, url, fp, errcode, errmsg, headers, data=None):
+        pass
+
+def resume_sownload():
+    file_exists = False
+    #判断是否存在
+    CustomURLClass = CustomURLOpener()
+    #设置打开对象--没有真正打开
+    if os.path.exists(TARGET_FILE):
+        out_file = open(TARGET_FILE,"ab")
+        #文件b字节流，a代表追加
+        file_exists = os.path.getsize(TARGET_FILE)
+        CustomURLClass.addheader("range","bytes=%s-"%(file_exists))
+        #下载，这个长度之后的值
+    else:
+        out_file = open(TARGET_FILE,"wb")
+        #打开本地的文件，w写的方式，b字节流
+        web_page=CustomURLClass.open(TARGET_URL+TARGET_FILE)
+        #打开网络的真正的下载地址
+    if int(web_page.headers['Content-Length'])==file_exists:
+        #检查是否已经下载过了
+        print "File already download"
+    byte_count =0
+    #总共下载的文件大小
+    while True:
+        data = web_page.read(8192)
+        #设置一个8192的缓冲区，每次都读取一批这样的数据
+        if not data:
+            #没有数据，已经下载完成，就退出
+            break
+        out_file.write(data)
+        #把下载的内容输出到本地
+        byte_count = byte_count+len(data)
+    web_page.close()
+    #关闭web请求
+    out_file.close()
+    #关闭本地文件写
+    for key,value in web_page.headers.items():
+        #获取web服务器的headers信息
+        print key,"=",value
+        print "File copied",byte_count,"bytes from ",web_page.url
+
+if __name__ == '__main__':
+    resume_sownload()
+
+
+xml,   XML.DOM
+
+xml.dom.minidom.parse   加载xml文件
+daya_dom.documentElement  用来解析根节点-  还有什么 daya_root.nodeName获取节点名字
+
+daya_root.childNodes 返回的所有的子节点信息--list
+import xml.dom.minidom
+
+daya_dom = xml.dom.minidom.parse("book.xml")
+daya_root = daya_dom.documentElement
+print daya_root.childNodes
+print daya_root.childNodes[1].nodeName,daya_root.childNodes[1].nodeValue
+
+
+import xml.dom.minidom
+
+daya_dom = xml.dom.minidom.parse("book.xml")
+daya_root = daya_dom.documentElement
+intro = daya_root.getElementsByTagName('intro')[0]
+#获取intro的内部的值
+for node in intro.childNodes:
+#解析是不是还有子标签
+    if node.nodeType  in (node.TEXT_NODE,node.CDATA_SECTION_NODE):
+        print node.data
+        #获取了真正的内容
+
+
+import xml.dom.minidom
+dom1 = xml.dom.minidom.parse('book.xml')
+#加载解析的文件
+daya_root = dom1.documentElement
+# 解析到根节点info
+book = {}
+booknode = daya_root.getElementsByTagName('list')
+#解析到了两个list
+for book in booknode:
+    print "~~"*30
+    print "id:" + book.getAttribute('id')
+    # 解析xml节点的属性值
+    for nodelist in book.childNodes:
+        # 解析list001的内容
+        if nodelist.nodeType == 1:
+            print nodelist.nodeName+":",
+            #判断是不是标题
+        for node in nodelist.childNodes:
+            #在循环head下的所有叶子节点值
+            print node.data
+            #获取值
+
+第二种解析方式：
+import xml.dom.minidom
+dom1 = xml.dom.minidom.parse('book.xml')
+# 解析文件
+daya_root = dom1.documentElement
+# 解析根节点
+book = {}
+#设置键值对
+booknode = daya_root.getElementsByTagName('list')
+#直接获取根节点下边的list节点
+for book in booknode:
+    #循环list001和002
+    print "~~"*30
+    print "id:" + book.getAttribute('id')
+    # 获取每个list的id的值
+    print 'head:'+book.getElementsByTagName('head')[0].childNodes[0].nodeValue
+    # 一层一层获取head的值
+    print 'name:' + book.getElementsByTagName('name')[0].childNodes[0].nodeValue
+    # 一层一层获取name的值
+    print 'number:' + book.getElementsByTagName('number')[0].childNodes[0].nodeValue
+    print 'page:' + book.getElementsByTagName('page')[0].childNodes[0].nodeValue
+
+
+第三种方式：
+import xml.dom.minidom
+dom1 = xml.dom.minidom.parse('book.xml')
+daya_root = dom1.documentElement
+book1 = []
+
+booknode = daya_root.getElementsByTagName('list')
+for book in booknode:
+    booklist = {}
+    #做成键值对 id =001
+    booklist['id']=book.getAttribute('id')
+    booklist['head'] = book.getElementsByTagName('head')[0].childNodes[0].nodeValue
+    #head = bookone
+    booklist['name'] = book.getElementsByTagName('name')[0].childNodes[0].nodeValue
+    booklist['number'] = book.getElementsByTagName('number')[0].childNodes[0].nodeValue
+    booklist['page'] = book.getElementsByTagName('page')[0].childNodes[0].nodeValue
+    book1.append(booklist)
+    #为了防止第二次list覆盖第一次的，所以把字典放在列表中
+print book1
+
+
+import xml.dom
+def create_element(doc,tag,attr):
+    # 专注于创建最底层的标签，例如head
+    elementNode = doc.createElement(tag)
+    #创建一个标签名字，例如<head>
+    textNode = doc.createTextNode(attr)
+    #创建值，例如bookone
+    elementNode.appendChild(textNode)
+    #把值放在标签的里边，作为子信息
+    return elementNode
+    #最后返回标签
+
+dom1 = xml.dom.getDOMImplementation()
+# 获取一个创建文档的对象
+doc = dom1.createDocument(None,'info',None)
+#创建根节点，例如<info>
+top_element = doc.documentElement
+#把创建好的根节点获取过来
+books=[{'head': u'bookone', 'page': u'200', 'number': u'001', 'id': u'001', 'name': u'python check'},
+       {'head': u'booktwo', 'page': u'300', 'number': u'002', 'id': u'002', 'name': u'python learn'}]
+for book in books:
+    #创建info下边的子标签
+    lNode = doc.createElement('list')
+    #创建list001获取002标签
+    lNode.setAttribute('id',book['id'])
+    # 在给list添加一个id的值<list id="001">
+    headNode = create_element(doc,'head',book['head'])
+    #创建 list下边的子标签<head>bookone</head>
+    pageNode = create_element(doc, 'page', book['page'])
+    numberNode = create_element(doc, 'number', book['number'])
+    nameNode = create_element(doc, 'name', book['name'])
+    lNode.appendChild(headNode)
+    # 把创建好的head标签添加到list标签下边
+    lNode.appendChild(pageNode)
+    lNode.appendChild(numberNode)
+    lNode.appendChild(nameNode)
+    top_element.appendChild(lNode)
+    #把list标签放在根标签下边，也就是放在info下边
+xmldaya = open("dayaxml.xml",'w')
+#以可写的方式打开一个文件
+doc.writexml(xmldaya,addindent=' '*4,newl='\n',encoding = 'utf-8')
+# 使用写xml的方法，写在xmldaya上，addindent每行行首的空格数，newl每行写完之后的操作-换行，
+# encoding就是xml支持的格式
+xmldaya.close()
+#写完关闭
+
+etree解析xml：
+
+import xml.etree.ElementTree
+root = xml.etree.ElementTree.parse("book.xml")
+#加载一个文件
+book_node = root.getiterator('list')
+#获取根节点的list标签
+for node in book_node:
+    #循环两个list
+    book_node_child = node.getchildren()[1]
+    #取的是每个list的第二个标签
+    print book_node_child.tag+':'+book_node_child.text
+    #拿标签名和值
+
+使用find查找。
+import xml.etree.ElementTree
+root = xml.etree.ElementTree.parse("book.xml")
+book_node = root.find('list')
+#find只能找到第一个匹配的
+head = book_node.find("head")
+#只是在第一个list进行
+print head.tag+":"+head.text
+for node in book_node:
+    #只有一个list，所以只要直接获取即可
+    print node.tag+':'+node.text
+
+
+使用findall获取
+import xml.etree.ElementTree
+root = xml.etree.ElementTree.parse("book.xml")
+book_node = root.findall('list')
+# 获取的两个list
+for node in book_node:
+    #循环一个list
+    for note in node:
+        #循环list里边的值
+       print note.tag+':'+note.text
+
+
+解析xml的标签内的键值对
+import xml.etree.ElementTree
+root = xml.etree.ElementTree.parse("book.xml")
+book_node = root.findall('list')
+#查找所有的list
+for node in book_node:
+    #循环每一个list
+    if node.attrib.has_key('id'):
+        #在list的内部查找是否有id这个键值对
+        print 'id'+":"+node.attrib['id']
+        #如果有，把值取出来
+    for note in node:
+        #在循环中获取list中的所有标签
+       print note.tag+':'+note.text
+
+解析HTML---HTMLParser -- 写查找表头，获取内容。查看是否到标题尾部
+import HTMLParser,urllib
+from htmlentitydefs import entitydefs
+def getimage(addr):
+#写一个专门打开连接的方式，把图片下载到本地
+    u = urllib.urlopen(addr)
+    #打开连接
+    data = u.read()
+    #读取连接内容
+    filename = addr.split("/")[-1]
+    #获取图片名
+    f = open(filename,'wb')
+    #在本地创建一个文件，名字就是图片名，打开的方式字节流的可写
+    f.write(data)
+    #把图片输出到本地
+    f.close()
+    print filename +": success"
+class TitleParser(HTMLParser.HTMLParser):
+    def __init__(self):
+        self.taglevels = []
+        self.handletags = ['title','body']
+        # 确定是要html的title和body值
+        self.processing = None
+        HTMLParser.HTMLParser.__init__(self)
+    def handle_starttag(self, tag, attrs):
+        # 判断标签的头是什么
+        if tag in self.handletags:
+            #如果是handletags里边任何一个
+            self.data = ''
+            self.processing = tag
+            #self.processing获取tag的标签title，就是在获取需要的标签的名字
+        if tag =='a':
+        #获取对应的标签下面a标签
+            for name,value in attrs:
+            #attrs存储的就是对应的a标签的所有的值
+                if name=='href':
+                #判断key是href
+                    print "Connnect link:"+value
+                    #直接取值
+        if tag == "img":
+        #判断标签是img
+            for name,value in attrs:
+            #获取标签下的key-value对
+                if name =='src':
+                #判断是不是图片的键
+                    getimage(value)
+                    #是就取图片的值
+    def handle_data(self, data):
+        #在拿对应的标签下的值--title
+        if self.processing:
+            #判断到的title，获取title的值
+            self.data += data
+
+    def handle_endtag(self, tag):
+        #检查是不是已经到了tag的尾，把已经获取的内容输出
+        if tag == self.processing:
+            #输出的时候调用获取data值的函数
+            print str(tag) + ":" +str(self.gettitle())
+    def handle_entityref(self, name):
+    #解析特殊字符
+        if entitydefs.has_key(name):
+        #判断entitydefs里是不是有对应的键值对
+            self.handle_data(entitydefs[name])
+            #直接去对应value
+        else:
+            self.handle_data('&'+name+';')
+            #如果没有，直接解析'&'开头+name（value）+';'-结尾
+    def handle_charref(self, name):
+    #解析value类型--数字类型
+        try:
+            charnum = int(name)
+            #把值编程int，可以就证明是值，不可以就证明是key
+        except ValueError:
+        #如果是key直接返回
+            return
+        if charnum<1 or charnum>255:
+        #要求值不能超1-255
+            return
+        self.handle_data(chr(charnum))
+    def gettitle(self):
+        return self.data
+
+fd = open('daya.html')
+#加载一个html文件
+tp = TitleParser()
+#产生一个解析的对象
+tp.feed(fd.read())
+# 解析文件
+
+import HTMLParser,urllib
+from htmlentitydefs import entitydefs
+
+class TitleParser(HTMLParser.HTMLParser):
+    def __init__(self):
+        self.taglevels = []
+        self.handletags = ['a']
+        #只获取a标签的内容
+        self.processing = None
+        self.linkString =''
+        #定义连接的key
+        self.linkaddr = ''
+        #定义连接地址
+        HTMLParser.HTMLParser.__init__(self)
+    def handle_starttag(self, tag, attrs):
+    #获取头部是a的标签
+        if tag in self.handletags:
+            for name,value in attrs:
+            #把a标签的key-value获取过来，输出value
+            # 例如  ：http://st.renren.com
+                if name=='href':
+                    self.linkaddr=value
+            self.processing=tag
+    def handle_data(self, data):
+    #获取a标签的值，就对应的连接的名 例如：学生团体申请入口
+        if self.processing:
+            self.linkString += data
+
+    def handle_endtag(self, tag):
+        if tag == self.processing:
+            print self.linkString.decode("utf-8")+":"+self.linkaddr
+            #输入已经获取的连接名和地址
+            #例如：学生团体申请入口:http://st.renren.com
+            self.processing = None
+            self.linkString=''
+            #把标签对应的内容
+
+    def handle_entityref(self, name):
+        if entitydefs.has_key(name):
+            self.handle_data(entitydefs[name])
+        else:
+            self.handle_data('&'+name+';')
+    def handle_charref(self, name):
+        try:
+            charnum = int(name)
+        except ValueError:
+            return
+        if charnum<1 or charnum>255:
+            return
+        self.handle_data(chr(charnum))
+    def gettitle(self):
+        return self.linkaddr
+
+tp = TitleParser()
+tp.feed(urllib.urlopen('http://www.renren.com/').read())
+#直接读取一个网络地址
+
+bs4的网络解析html：
+import urllib.request
+from bs4 import BeautifulSoup
+
+url = r'https://ke.qq.com/?tuin=a8b024d7'
+#创建一个连接地址
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'}
+#做了一个伪装，使用google浏览器
+req = urllib.request.Request(url=url,headers=headers)
+#把url地址左晨给一个请求
+res = urllib.request.urlopen(req)
+# 读取请求的信息
+html = res.read().decode("utf-8")
+
+soup = BeautifulSoup(html,"html.parser")
+#解析，html的返回信息
+head = soup.findAll("head")
+#查找所有的关于head的标签
+head1 = soup.head
+#找head标签的第二种方式
+html = soup.contents[2]
+#在通过里边的值的方式获取html标签
+head = html.contents[1]
+#通过html标签获取head
+per = body.parent
+#获取父标签
+a = body.findAll("a")
+#查找body标签下的所有a标签
+head = body.previousSibling.previousSibling
+#查找body的上一个的上一个标签
+test = soup.find("a")
+#只找第一个匹配的标签
+list = ['head','body']
+test = soup.findAll(list)
+#可以查找一个数组
+test1 = soup.find_all(class_="header-index")
+#关键字后边加下划线
+test1 = soup.find(attrs={(property(re.compile("og:title"))),type(' PyCharm: the Python IDE for Professional Developers by JetBrains')})
+#   通过特殊property 和type获取标签
+print(head)
+
+
+from bs4 import BeautifulSoup
+import re
+import urllib.request
+url = r'https://ke.qq.com/?tuin=a8b024d7'
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'}
+req = urllib.request.Request(url=url,headers=headers)
+res = urllib.request.urlopen(req)
+html = res.read().decode("utf-8")
+soup = BeautifulSoup(html,"html.parser")
+# print(soup.title)
+#获取title标签
+# print(soup.title.name)
+#获取标签名
+# print(soup.title.string)
+#获取表内的值
+# print(soup.title.parent.name)
+#获取父标签
+# print(soup.a)
+#获取a标签
+# print(soup.a['href'])
+#获取a标签的 href--key  通过key获取值
+#print(soup.header.contents)
+# 获取header标签的所有的标签
+# print(soup.find(id="js_main_nav").get_text())
+#获取id="js_main_nav"标签的text内容，text显示的标签页面内容
+# print(soup.a.attrs)
+# 获取a标签的所有的键值对属性
+# for s_value in soup.findAll("a"):
+#获取所有的a标签的值
+#     print(s_value.get_text())
+# for tag in soup.findAll(title="IT·互联网",target="_blank"):
+获取所有的title="IT·互联网",target="_blank"的标签
+#     print(tag.name)
+#
+li = []
+for tag in soup.findAll(id="js_main_nav"):
+#获取id="js_main_nav"的标签
+    for child in tag.children:
+     #再获取子标签
+        li.append(child)
+        #子标签放在list中
+print(li[1].get_text())
+#把所有的字标签纸输出---页面显示的内容
+
+
+python实现邮件发送功能：
+1、开启邮箱的smtp功能。---短信验证的方式--腾讯给一个验证码（12位字母）--做好保存--登录密码，
+2、原理 ----  一个邮箱到另一个邮箱    本地邮箱   设置一个邮箱到邮箱之间的服务器。
+
+3、过程    先登录服务器---设置本地的邮箱，--设置对端邮箱   ---设置内容
+
+import smtplib
+from email.mime.text  import MIMEText
+from email.header import Header
+import os
+
+sender = "2830116055@qq.com"
+# 发送者
+receiver = ['2830116055@qq.com',"513077914@qq.com","978058532@qq.com"]
+# 接受者
+mail_host = "smtp.qq.com"
+# 发送的服务器
+mail_port = 465
+# 服务器的端口
+mail_user = '2830116055'
+# 邮箱的登陆者
+mail_pass = 'gcilsdhclkfmdead'
+# 邮箱的验证码--不是自己密码
+
+def daya_email(title):
+    #发送的主程序
+    msg = MIMEText(open("test.py","rb").read(),"plain","utf-8")
+    # 设置我的邮件的值的类型和格式
+    msg['From']=Header(sender)
+    # 写发送者
+    msg['To'] = Header(str(":".join(receiver)))
+    # 写接受者
+    msg['Subject'] = Header(title)
+
+    #形成的就是一个文件Header--html
+    #文件  “你好” "plain","utf-8"     From -sender   To-receiver   title
+    try:
+        smtpObj = smtplib.SMTP_SSL(mail_host,mail_port)
+        # 登录发件服务器
+        smtpObj.login(mail_user,mail_pass)
+        # 使用你的账户和密码登录
+        smtpObj.sendmail(sender,receiver,msg.as_string())
+        #设置发送邮件者和接受者，发送的信息
+        smtpObj.quit()
+        #完成就退出
+        return "success"
+    except smtplib.SMTPException as e:
+        return e
+
+if __name__ == '__main__':
+    send = daya_email("达亚测试")
+    print(send)
+
+
+
+
+
+
+
+

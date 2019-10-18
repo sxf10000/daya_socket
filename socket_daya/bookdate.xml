@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<info>
+    <list id="001">
+        <head>bookone</head>
+        <name>python check</name>
+        <page>200</page>
+    </list>
+    <list id="002">
+        <head>booktwo</head>
+        <name>python learn</name>
+        <page>300</page>
+    </list>
+</info>

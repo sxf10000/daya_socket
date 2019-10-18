@@ -1,0 +1,27 @@
+init
+init 0 直接关机
+init 1  单用户--root--linux
+init 2  多用户-多用户
+init 3 完全多用户
+init 4 图形化
+init 5 安全模式
+init 6 重启
+
+ctrl +c 关闭命令
+ctrl+d   关闭终端
+ctrl+z   暂停  ping www.badu.com  4次--暂停  --fg  回复
+
+cd 进度目录
+ls  查看里边的所有内容
+
+/dev 代表所有的外来社贝的接口
+mkdir /tmp/io
+
+mount /dev/sda /tmp/io
+/tmp/io就是u盘的所有内容
+
+创建系统---用户和密码   一定不能忘（root   密码忘记）\
+
+linux的文件后缀不代表任何意义
+
+grep查看-----sed替换-----awk分割

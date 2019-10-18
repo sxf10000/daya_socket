@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<info>
+   <intro>Book message</intro>
+    <list id='001'>
+        <head>bookone</head>
+        <name>python check</name>
+        <number>001</number>
+        <page>200</page>
+    </list>
+
+    <list id='002'>
+        <head>booktwo</head>
+        <name>python learn</name>
+        <number>002</number>
+        <page>300</page>
+    </list>
+
+</info>
